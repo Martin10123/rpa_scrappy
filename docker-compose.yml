@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: autoflow_postgres
+    environment:
+      POSTGRES_USER: autoflow_user
+      POSTGRES_PASSWORD: autoflow_password_dev
+      POSTGRES_DB: autoflow_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autoflow_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - autoflow_network
+    restart: unless-stopped
+
+  # PgAdmin - UI para gestionar PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:7.8
+    container_name: autoflow_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@autoflow.com
+      PGADMIN_DEFAULT_PASSWORD: admin_password_dev
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - autoflow_network
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  autoflow_network:
+    driver: bridge
