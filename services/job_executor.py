@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from database import SyncSessionLocal
 from models.job import Job, JobStatus
+from services.gemini_parser import parse_instruction_with_gemini, GeminiParserError
 
 
 class JobExecutor:
@@ -49,6 +50,17 @@ class JobExecutor:
             ]
         }
 
+    def build_execution_plan(self, instruction: str) -> dict:
+        """Construye el plan con Gemini y fallback local si falla."""
+        try:
+            self.add_log("Generando plan de ejecucion con Gemini...")
+            plan = parse_instruction_with_gemini(instruction)
+            self.add_log("Plan generado por Gemini y validado")
+            return plan.model_dump()
+        except GeminiParserError as e:
+            self.add_log(f"Gemini fallo, usando fallback local: {e}", level="WARNING")
+            return self.simulate_execution_plan()
+
     def execute_step(self, step: dict) -> bool:
         self.add_log(f"Ejecutando paso {step['id']}: {step['action']}")
         try:
@@ -71,8 +83,7 @@ class JobExecutor:
                 instruction = job.instruction
                 self.add_log(f"Instrucción: {instruction}")
 
-                self.add_log("Generando plan de ejecución...")
-                execution_plan = self.simulate_execution_plan()
+                execution_plan = self.build_execution_plan(instruction)
 
                 job = self._get_job(session)
                 job.execution_plan = execution_plan

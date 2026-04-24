@@ -23,9 +23,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # ============================================
-    # Claude API
+    # Gemini API
     # ============================================
-    ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
     
     # ============================================
     # Logging

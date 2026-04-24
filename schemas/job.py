@@ -3,7 +3,7 @@ AutoFlow AI - Job Schemas
 Esquemas Pydantic para validación de requests/responses
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, Any
 from datetime import datetime
 from enum import Enum
@@ -35,6 +35,33 @@ class JobCreate(BaseModel):
                 "instruction": "Ve a Google, busca 'AutoFlow AI', y extrae los primeros 5 resultados"
             }
         }
+
+
+class ExecutionStep(BaseModel):
+    """Paso individual dentro de un plan de ejecucion"""
+
+    id: int = Field(..., ge=1, description="Numero de paso")
+    action: str = Field(..., min_length=2, max_length=100, description="Accion a ejecutar")
+    description: str = Field(..., min_length=3, max_length=300, description="Descripcion del paso")
+    params: dict[str, Any] = Field(default_factory=dict, description="Parametros del paso")
+
+
+class ExecutionPlan(BaseModel):
+    """Plan estructurado generado por IA"""
+
+    total_steps: int = Field(..., ge=1, le=50, description="Total de pasos")
+    steps: list[ExecutionStep] = Field(..., min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def validate_consistency(self):
+        if self.total_steps != len(self.steps):
+            raise ValueError("total_steps debe coincidir con la cantidad real de steps")
+
+        ids = [step.id for step in self.steps]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Los IDs de pasos no deben repetirse")
+
+        return self
 
 
 class JobResponse(BaseModel):
